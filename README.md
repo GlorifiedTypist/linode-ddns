@@ -21,3 +21,45 @@ After linode-ddns is running it will send a request to ifconfig.co to establish 
 | LINODE_TOKEN             | Linode API token scoped to allow DNS read/update actions   |
 | DNS_HOSTNAME             | Fully qualified domain name to be updated                  |
 | DEBUG                    | Set debug logs (boolean) [Default: false]                  |
+
+## Example Kubernetes deployment
+
+To run linode-ddns on a hourly cron. Update DNS_HOSTNAME and LINODE_TOKEN.
+
+``` kubectl apply -f ./cronjob.yaml ```
+
+```
+apiVersion: v1
+kind: Secret
+metadata:
+  name: linode-ddns
+type: Opaque
+stringData:
+  LINODE_TOKEN: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: linode-ddns
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: linode-ddns
+            image: jeffvader/linode-ddns
+            env:
+              - name: LINODE_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: linode-ddns
+                    key: LINODE_TOKEN
+              - name: DNS_HOSTNAME
+                value: hostname.example.com
+              - name: DEBUG
+                value: "true"
+            command: ['/linode-ddns']
+          restartPolicy: OnFailure
+```
